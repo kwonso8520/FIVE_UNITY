@@ -4,45 +4,65 @@ using UnityEngine;
 
 public class PlayerControl : MonoBehaviour
 {
+    Animator anim;
+    public float speed;
+    public int damage;
+    public float rate;
+    public Transform bulletPos;
+    public GameObject bullet;
+    float hAxis;
+    float vAxis;
+    bool mouse;
+    bool isfireReady;
+    float fireDelay;
 
-    public float moveSpeed; // 이동스피드.
-    public float jumpPower; // 점프파워.
-    public float gravity;   // 중력.
-
-    private CharacterController controller; // 캐릭터 컨트롤러.
-    private Vector3 moveDir;                // 방향을 담을 벡터.
-
+    Vector3 moveVec;
+    private void Awake()
+    {
+        anim = GetComponent<Animator>();
+    }
     void Start()
     {
-        moveSpeed = 5.0f;
-        jumpPower = 7.0f;
-        gravity = 9.8f;
 
-        moveDir = Vector3.zero;
-        controller = GetComponent<CharacterController>();
     }
 
     void Update()
     {
-        // 현재 캐릭터가 땅에 있는가?
-        if (controller.isGrounded)
+        hAxis = Input.GetAxisRaw("Horizontal");
+        vAxis = Input.GetAxisRaw("Vertical");
+        moveVec = new Vector3(hAxis, 0, vAxis).normalized;
+        transform.position += moveVec * speed * Time.deltaTime;
+
+        anim.SetBool("fwd", moveVec != Vector3.zero);
+        Vector3 rota = transform.position + new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical"));
+        //rota.y = 0;
+        transform.LookAt(rota);
+
+        if (Input.GetMouseButtonDown(0))
         {
-            // 움직임 키보드로부터 입력받기. 
-            moveDir = new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical"));
-
-            // 이동스피드 적용.
-            moveDir *= moveSpeed * -1;
-
-            // 점프키(스페이스)를 눌렀다면, 점프파워 적용.
-            if (Input.GetButton("Jump"))
-                moveDir.y = jumpPower;
-
+            Use();
         }
-
-        // 중력 적용.
-        moveDir.y -= gravity * Time.deltaTime;
-
-        // 캐릭터 움직임.
-        controller.Move(moveDir * Time.deltaTime);
+    }
+    void Attack()
+    {
+        fireDelay += Time.deltaTime;
+        isfireReady = rate < fireDelay;
+        if (mouse && isfireReady)
+        {
+            Use();
+            anim.SetTrigger("attack");
+            fireDelay = 0;
+        }
+    }
+    public void Use()
+    {
+        StartCoroutine("shot");
+    }
+    IEnumerator shot()
+    {
+        GameObject intantBullet = Instantiate(bullet, bulletPos.position,bulletPos.rotation);
+        Rigidbody bulletRigid = intantBullet.GetComponent<Rigidbody>();
+        bulletRigid.velocity = bulletPos.forward * 50;
+        yield return null;
     }
 }
